@@ -6,6 +6,26 @@
 - kong/dp/values.yaml — Data Plane Helm values (OSS)
 - scripts/gen-certs.sh — generates hybrid clustering certs; creates secret kong/kong-cluster-cert
 
+## Some info
+### k3d
+k3d runs a lightweight Kubernetes distro (k3s) inside Docker containers. It’s perfect for local dev because you can create or delete a full cluster in seconds, without VMs.
+
+Why it’s handy here:
+- Fast & lightweight: k3s + Docker → tiny footprint, quick startup.
+- Zero VM hassle: uses Docker Desktop you already have.
+- Easy port mapping: we expose the DP via NodePort 32080 mapped to your host.
+- Disposable & reproducible: k3d cluster create/delete makes clean re-tests trivial.
+- Works great with Helm/Argo CD: nothing special required—just kubectl, helm, and go.
+
+### helm
+Helm is the package manager for Kubernetes. It installs apps using versioned templates called charts, so you don’t have to hand-craft tons of YAML.
+
+Why it’s handy here:
+- Repeatable installs/upgrades: helm upgrade --install … handles first install and updates.
+- Config via values: we keep CP/DP config in kong/cp/values.yaml and kong/dp/values.yaml.
+- Built-in lifecycle hooks: the Kong chart runs DB migrations automatically during install/upgrade.
+- Easy rollback/versioning: every change is a revision you can roll back to.
+
 ## Quickstart
 
 ### Install required tools
