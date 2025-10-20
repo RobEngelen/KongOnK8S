@@ -1,9 +1,13 @@
-# cert outputs (do not commit)
-.certs/*
-!/.certs/.keep
+# cert outputs (do not commit) — match any depth
+**/.certs/*
+!**/.certs/.keep
 
 # common junk
 **/*.log
 **/.DS_Store
 .vscode/
 .idea/
+
+# ensure these files are not ignored
+!.gitignore
+!.gitattributes
