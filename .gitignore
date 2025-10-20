@@ -1,0 +1,9 @@
+# cert outputs (do not commit)
+.certs/*
+!/.certs/.keep
+
+# common junk
+**/*.log
+**/.DS_Store
+.vscode/
+.idea/
