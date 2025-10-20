@@ -110,3 +110,23 @@ curl -i http://localhost:32080/anything
 # === 10) CLEANUP (optional) ===
 k3d cluster delete kong
 ```
+
+### Continuing after pc reboot?
+Make sure to first start docker desktop
+
+```bash
+# Check cluster & restart if necesarry
+k3d cluster list
+k3d cluster start kong
+
+# Check pods
+kubectl config use-context k3d-kong
+kubectl -n kong get pods
+
+#Re-start any port-forwards
+kubectl -n kong port-forward svc/kong-cp-kong-admin 8001:8001
+
+#Quick test
+curl -s http://localhost:8001/ | jq .           # CP Admin API
+curl -i http://localhost:32080/anything         # DP proxy (if you created the route before)
+```
