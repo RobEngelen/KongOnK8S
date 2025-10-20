@@ -1,0 +1,49 @@
+ingressController:
+  enabled: false
+
+image:
+  repository: kong
+  tag: "3.7"   # keep consistent with your OSS tests
+
+secretVolumes:
+  - kong-cluster-cert   # uses secret kong/kong-cluster-cert you already created
+
+env:
+  role: control_plane
+
+  # Hybrid clustering certs (mounted from secret)
+  cluster_cert: /etc/secrets/kong-cluster-cert/tls.crt
+  cluster_cert_key: /etc/secrets/kong-cluster-cert/tls.key
+
+  # Database (CloudNativePG)
+  database: postgres
+  pg_database: kong
+  pg_user: kong
+  pg_password: demo123
+  pg_host: kong-cp-db-rw.kong.svc.cluster.local
+  pg_ssl: "on"
+  pg_ssl_version: tlsv1_3
+
+# Expose Admin API so we can configure CP via port-forward
+admin:
+  enabled: true
+  http:
+    enabled: true
+
+# CP does NOT serve proxy traffic in hybrid
+proxy:
+  enabled: false
+
+# Required for hybrid (CP clustering endpoints)
+cluster:
+  enabled: true
+  tls:
+    enabled: true
+
+clustertelemetry:
+  enabled: true
+  tls:
+    enabled: true
+
+enterprise:
+  enabled: false

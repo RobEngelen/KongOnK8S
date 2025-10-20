@@ -1,0 +1,15 @@
+apiVersion: postgresql.cnpg.io/v1
+kind: Cluster
+metadata:
+  name: kong-cp-db
+  namespace: kong
+spec:
+  instances: 1
+  bootstrap:
+    initdb:
+      database: kong
+      owner: kong
+      secret:
+        name: kong-db-secret
+  storage:
+    size: 5Gi
