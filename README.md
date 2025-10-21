@@ -1,34 +1,87 @@
 # KongOnK8S (OSS Hybrid with k3d + Helm)
 
 ## Structure
-- db/cnpg/… — CloudNativePG operator objects (namespace, secret, postgres cluster)
-- kong/cp/values.yaml — Control Plane Helm values (OSS)
-- kong/dp/values.yaml — Data Plane Helm values (OSS)
-- scripts/gen-certs.sh — generates hybrid clustering certs; creates secret kong/kong-cluster-cert
+
+* db/cnpg/… — CloudNativePG operator objects (namespace, secret, postgres cluster)
+* kong/cp/values.yaml — Control Plane Helm values (OSS)
+* kong/dp/values.yaml — Data Plane Helm values (OSS)
+* scripts/gen-certs.sh — generates hybrid clustering certs; creates secret kong/kong-cluster-cert
 
 ## Some info
+
+### WSL2
+
+**Goal:** run Linux tools (kubectl, helm, k3d) on Windows via Ubuntu on WSL2.
+
+1. **Enable WSL & install Ubuntu**
+
+   ```powershell
+   # In an elevated PowerShell
+   wsl --install -d Ubuntu
+   ```
+
+   Reboot if prompted, then launch *Ubuntu* from the Start menu to finish setup.
+
+2. **Update Ubuntu & install basics**
+
+   ```bash
+   sudo apt-get update
+   sudo apt-get install -y curl git openssl jq
+   ```
+
+3. **Install Docker Desktop (Windows)**
+
+   * Install Docker Desktop and enable **“Use the WSL 2 based engine”** and **WSL integration** for your Ubuntu distro (Settings → Resources → WSL integration).
+
+4. **Install CLIs in Ubuntu**
+
+   * **kubectl**
+
+     ```bash
+     curl -LO "https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl"
+     chmod +x kubectl && sudo mv kubectl /usr/local/bin/kubectl
+     ```
+   * **Helm**
+
+     ```bash
+     curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+     ```
+   * **k3d** (k3s-in-Docker)
+
+     ```bash
+     command -v k3d >/dev/null || curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+     ```
+
+5. **Use your Linux home for repos**
+   Work under `/home/<you>` (e.g., `~/KongOnK8S`) to avoid Windows path quirks.
+
 ### k3d
+
 k3d runs a lightweight Kubernetes distro (k3s) inside Docker containers. It’s perfect for local dev because you can create or delete a full cluster in seconds, without VMs.
 
 Why it’s handy here:
-- Fast & lightweight: k3s + Docker → tiny footprint, quick startup.
-- Zero VM hassle: uses Docker Desktop you already have.
-- Easy port mapping: we expose the DP via NodePort 32080 mapped to your host.
-- Disposable & reproducible: k3d cluster create/delete makes clean re-tests trivial.
-- Works great with Helm/Argo CD: nothing special required—just kubectl, helm, and go.
+
+* Fast & lightweight: k3s + Docker → tiny footprint, quick startup.
+* Zero VM hassle: uses Docker Desktop you already have.
+* Easy port mapping: we expose the DP via NodePort 32080 mapped to your host.
+* Disposable & reproducible: k3d cluster create/delete makes clean re-tests trivial.
+* Works great with Helm/Argo CD: nothing special required—just kubectl, helm, and go.
 
 ### helm
+
 Helm is the package manager for Kubernetes. It installs apps using versioned templates called charts, so you don’t have to hand-craft tons of YAML.
 
 Why it’s handy here:
-- Repeatable installs/upgrades: helm upgrade --install … handles first install and updates.
-- Config via values: we keep CP/DP config in kong/cp/values.yaml and kong/dp/values.yaml.
-- Built-in lifecycle hooks: the Kong chart runs DB migrations automatically during install/upgrade.
-- Easy rollback/versioning: every change is a revision you can roll back to.
+
+* Repeatable installs/upgrades: helm upgrade --install … handles first install and updates.
+* Config via values: we keep CP/DP config in kong/cp/values.yaml and kong/dp/values.yaml.
+* Built-in lifecycle hooks: the Kong chart runs DB migrations automatically during install/upgrade.
+* Easy rollback/versioning: every change is a revision you can roll back to.
 
 ## Quickstart
 
 ### Install required tools
+
 ```bash
 sudo apt-get update
 sudo apt-get install -y curl git openssl jq
@@ -42,6 +95,7 @@ command -v k3d >/dev/null || curl -s https://raw.githubusercontent.com/k3d-io/k3
 ```
 
 ### Create k3d kubernetes cluster
+
 ```bash
 # === 1) CLUSTER (k3d) ===
 k3d cluster create kong -p "32080:32080@server:0"
@@ -49,14 +103,8 @@ kubectl cluster-info
 kubectl config use-context k3d-kong
 ```
 
-### Create Repo layout
-```bash
-# === 2) REPO LAYOUT (if not already) ===
-cd ~/KongOnK8S
-mkdir -p cluster kong/{cp,dp} scripts db/cnpg
-```
-
 ### CNPG Operator (cloudnative postgres)
+
 ```bash
 # === 3) CNPG OPERATOR (install once) ===
 helm repo add cnpg https://cloudnative-pg.github.io/charts
@@ -66,6 +114,7 @@ kubectl -n cnpg get pods
 ```
 
 ### Generate cluster certs & kubernetes secret
+
 ```bash
 # === 4) HYBRID CERTS (shared cert for dev) + SECRET ===
 chmod +x scripts/gen-certs.sh
@@ -74,6 +123,7 @@ chmod +x scripts/gen-certs.sh
 ```
 
 ### Database objects
+
 ```bash
 # === 5) DATABASE OBJECTS (CNPG cluster in kong ns) ===
 kubectl apply -k db/cnpg
@@ -84,6 +134,7 @@ kubectl -n kong get svc
 ```
 
 ### Kong helm repo
+
 ```bash
 # === 6) KONG HELM REPO ===
 helm repo add kong https://charts.konghq.com
@@ -91,6 +142,7 @@ helm repo update
 ```
 
 ### Setup control plane
+
 ```bash
 # === 7) CONTROL PLANE (OSS) ===
 # Ensure kong/cp/values.yaml is present
@@ -104,6 +156,7 @@ curl -s http://localhost:8001/ | jq . || true
 ```
 
 ### Setup data plane
+
 ```bash
 # === 8) DATA PLANE (OSS) ===
 # Ensure kong/dp/values.yaml is present
@@ -112,6 +165,7 @@ kubectl -n kong get pods -w
 ```
 
 ### Test
+
 ```bash
 # === 9) TEST (create route on CP, call through DP NodePort) ===
 curl -s -X POST http://localhost:8001/services \
@@ -125,13 +179,46 @@ curl -s -X POST http://localhost:8001/services/example/routes \
 curl -i http://localhost:32080/anything
 ```
 
+#### Kong Manager OSS (GUI) & port-forwarding
+
+Kong Manager OSS runs on **port 8002** and calls the **Admin API on 8001** from your browser.
+
+* Ensure Manager is enabled in your CP values (optional snippet):
+
+  ```yaml
+  # kong/cp/values.yaml
+  env:
+    admin_listen: 0.0.0.0:8001
+    admin_gui_listen: 0.0.0.0:8002
+    admin_gui_url: http://localhost:8002
+    admin_gui_api_url: http://localhost:8001
+  manager:
+    enabled: true
+    http:
+      enabled: true
+    tls:
+      enabled: false
+  ```
+* Port-forward **both** services (two terminals), then browse to `http://localhost:8002`:
+
+  ```bash
+  # Admin API
+  kubectl -n kong port-forward svc/kong-cp-kong-admin 8001:8001
+  # Manager UI
+  kubectl -n kong port-forward svc/kong-cp-kong-manager 8002:8002
+  ```
+
+If only 8002 is forwarded, the UI loads but can’t reach the Admin API, so lists appear empty.
+
 ### Cleanup (Optional)
+
 ```bash
 # === 10) CLEANUP (optional) ===
 k3d cluster delete kong
 ```
 
 ### Continuing after pc reboot?
+
 Make sure to first start docker desktop
 
 ```bash
@@ -145,6 +232,7 @@ kubectl -n kong get pods
 
 #Re-start any port-forwards
 kubectl -n kong port-forward svc/kong-cp-kong-admin 8001:8001
+kubectl -n kong port-forward svc/kong-cp-kong-manager 8002:8002
 
 #Quick test
 curl -s http://localhost:8001/ | jq .           # CP Admin API

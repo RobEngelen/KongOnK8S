@@ -24,11 +24,26 @@ env:
   pg_ssl: "on"
   pg_ssl_version: tlsv1_3
 
+  # (keep your existing entries)
+  admin_listen: 0.0.0.0:8001
+  admin_gui_listen: 0.0.0.0:8002
+  # For local use via port-forward:
+  admin_gui_url: http://localhost:8002
+  admin_gui_api_url: http://localhost:8001
+
 # Expose Admin API so we can configure CP via port-forward
 admin:
   enabled: true
   http:
     enabled: true
+    
+# --- add service exposure for the GUI ---
+manager:
+  enabled: true
+  http:
+    enabled: true
+  tls:
+    enabled: false
 
 # CP does NOT serve proxy traffic in hybrid
 proxy:
